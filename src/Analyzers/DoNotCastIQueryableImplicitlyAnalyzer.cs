@@ -42,6 +42,19 @@ namespace Shane32.Analyzers
                     return;
                 }
 
+                var parent = conversionOperation.Parent;
+                var checkedParents = new List<IOperation>();
+                while (parent != null) {
+                    if (checkedParents.Contains(parent)) {
+                        break;
+                    }
+                    checkedParents.Add(parent);
+                    if (parent.Type?.Name == nameof(System.Linq.Expressions.Expression)) {
+                        return;
+                    }
+                    parent = parent.Parent;
+                }
+
                 var diagnostic = Diagnostic.Create(
                     NoImplicitIQueryableCasts,
                     conversionOperation.Syntax.GetLocation(),

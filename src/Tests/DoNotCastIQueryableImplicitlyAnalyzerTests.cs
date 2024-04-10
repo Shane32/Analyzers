@@ -164,4 +164,27 @@ public class DoNotCastIQueryableImplicitlyAnalyzerTests
 
         await VerifyCS.VerifyAnalyzerAsync(source);
     }
+
+    [Fact]
+    public async Task IQueryable_WithinQuery()
+    {
+        const string source =
+            """
+            using System.Linq;
+
+            public class TestClass
+            {
+                public TestClass()
+                {
+                    var query = Enumerable.Empty<int>().AsQueryable();
+                    var query2 = query.Where(x => query.ToList().Count() > 5);
+                }
+            }
+            """
+        ;
+
+        await VerifyCS.VerifyAnalyzerAsync(source);
+    }
+
+    // todo: check for Queryable.Single and other non-async methods on IQueryable
 }
