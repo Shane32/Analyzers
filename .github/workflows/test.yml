@@ -77,7 +77,7 @@ jobs:
         uses: coverallsapp/github-action@v1.1.2
         with:
           github-token: ${{secrets.GITHUB_TOKEN }}
-          path-to-lcov: ${{ matrix.os }}.lcov.net8.0.info
+          path-to-lcov: ${{ matrix.os }}.lcov.info
           parallel: true
           flag-name: ${{ matrix.os }}
       - name: Upload coverage to Codecov
