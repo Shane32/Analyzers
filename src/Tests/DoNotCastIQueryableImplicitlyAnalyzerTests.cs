@@ -185,6 +185,4 @@ public class DoNotCastIQueryableImplicitlyAnalyzerTests
 
         await VerifyCS.VerifyAnalyzerAsync(source);
     }
-
-    // todo: check for Queryable.Single and other non-async methods on IQueryable
 }

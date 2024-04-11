@@ -5,4 +5,5 @@
 
 Rule ID | Category | Severity | Notes
 --------|----------|----------|-------
-SHANE001 | Usage | Warning | EnumerableCastAnalyzer
+SHANE001 | Usage | Warning | DoNotCastIQueryableImplicitlyAnalyzer
+SHANE002 | Usage | Warning | DoNotCallQueryableSynchronousMethodsAnalyzer

@@ -4,64 +4,57 @@ using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Operations;
 using Shane32.Analyzers.Helpers;
 
-namespace Shane32.Analyzers
+namespace Shane32.Analyzers;
+
+[DiagnosticAnalyzer(LanguageNames.CSharp)]
+public class DoNotCastIQueryableImplicitlyAnalyzer : DiagnosticAnalyzer
 {
-    [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class DoNotCastIQueryableImplicitlyAnalyzer : DiagnosticAnalyzer //CodeAnalyzerBase
+    public static readonly DiagnosticDescriptor NoImplicitIQueryableCasts = new(
+        id: DiagnosticIds.NO_IMPLICIT_IQUERYABLE_CASTS,
+        title: "Don't implicitly cast IQueryable to IEnumerable",
+        messageFormat: "Don't implicitly cast IQueryable to IEnumerable",
+        category: DiagnosticCategories.USAGE,
+        defaultSeverity: DiagnosticSeverity.Warning,
+        //helpLinkUri: HelpLinks.DO_NOT_USE_OBSOLETE_ARGUMENT_METHOD,
+        isEnabledByDefault: true);
+
+    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } = ImmutableArray.Create(
+        NoImplicitIQueryableCasts);
+
+    public override void Initialize(AnalysisContext context)
     {
-        public static readonly DiagnosticDescriptor NoImplicitIQueryableCasts = new(
-            id: DiagnosticIds.NO_IMPLICIT_IQUERYABLE_CASTS,
-            title: "Don't implicitly cast IQueryable to IEnumerable",
-            messageFormat: "Don't implicitly cast IQueryable to IEnumerable",
-            category: DiagnosticCategories.USAGE,
-            defaultSeverity: DiagnosticSeverity.Warning,
-            //helpLinkUri: HelpLinks.DO_NOT_USE_OBSOLETE_ARGUMENT_METHOD,
-            isEnabledByDefault: true);
+        context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
+        context.EnableConcurrentExecution();
 
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } = ImmutableArray.Create(
-            NoImplicitIQueryableCasts);
+        context.RegisterOperationAction(AnalyzeOperationAction, OperationKind.Conversion);
+    }
 
-        public override void Initialize(AnalysisContext context)
-        {
-            context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
-            context.EnableConcurrentExecution();
+    private void AnalyzeOperationAction(OperationAnalysisContext context)
+    {
+        if (context.Operation is IConversionOperation conversionOperation &&
+            conversionOperation.Operand?.Type?.Name == nameof(IQueryable<object>) &&
+            conversionOperation.Type?.Name == nameof(IEnumerable<object>) &&
+            conversionOperation.IsImplicit) {
 
-            context.RegisterOperationAction(AnalyzeOperationAction, OperationKind.Conversion);
-        }
+            if (conversionOperation.Parent is IArgumentOperation argumentOperation &&
+                argumentOperation.Parent is IInvocationOperation invocationOperation &&
+                invocationOperation.TargetMethod.Name == nameof(Enumerable.AsEnumerable)) {
+                return;
+            }
 
-        private void AnalyzeOperationAction(OperationAnalysisContext context)
-        {
-            if (context.Operation is IConversionOperation conversionOperation &&
-                conversionOperation.Operand?.Type?.Name == nameof(IQueryable<object>) &&
-                conversionOperation.Type?.Name == nameof(IEnumerable<object>) &&
-                conversionOperation.IsImplicit) {
-
-                if (conversionOperation.Parent is IArgumentOperation argumentOperation &&
-                    argumentOperation.Parent is IInvocationOperation invocationOperation &&
-                    invocationOperation.TargetMethod.Name == nameof(Enumerable.AsEnumerable)) {
+            var parent = conversionOperation.Parent;
+            while (parent != null) {
+                if (parent.Type?.Name == nameof(System.Linq.Expressions.Expression)) {
                     return;
                 }
-
-                var parent = conversionOperation.Parent;
-                var checkedParents = new List<IOperation>();
-                while (parent != null) {
-                    if (checkedParents.Contains(parent)) {
-                        break;
-                    }
-                    checkedParents.Add(parent);
-                    if (parent.Type?.Name == nameof(System.Linq.Expressions.Expression)) {
-                        return;
-                    }
-                    parent = parent.Parent;
-                }
-
-                var diagnostic = Diagnostic.Create(
-                    NoImplicitIQueryableCasts,
-                    conversionOperation.Syntax.GetLocation(),
-                    conversionOperation.Operand.Syntax.ToString());
-
-                context.ReportDiagnostic(diagnostic);
+                parent = parent.Parent;
             }
+
+            var diagnostic = Diagnostic.Create(
+                NoImplicitIQueryableCasts,
+                conversionOperation.Syntax.GetLocation());
+
+            context.ReportDiagnostic(diagnostic);
         }
     }
 }
