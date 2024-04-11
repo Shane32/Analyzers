@@ -46,6 +46,8 @@ public class DoNotCastIQueryableImplicitlyAnalyzer : DiagnosticAnalyzer
             while (parent != null) {
                 if (parent.Type?.Name == nameof(System.Linq.Expressions.Expression)) {
                     return;
+                } else if (parent.Type?.Name == nameof(IQueryable)) {
+                    return;
                 }
                 parent = parent.Parent;
             }

@@ -50,6 +50,28 @@ public class DoNotCastIQueryableImplicitlyAnalyzerTests
     }
 
     [Fact]
+    public async Task IQueryable_Join()
+    {
+        const string source =
+            """
+            using System.Linq;
+
+            public class TestClass
+            {
+                public TestClass()
+                {
+                    var query = Enumerable.Empty<int>().AsQueryable();
+                    var query2 = Enumerable.Empty<int>().AsQueryable();
+                    var query3 = query.Join(query2, x => x, y => y, (x, y) => x);
+                }
+            }
+            """
+        ;
+
+        await VerifyCS.VerifyAnalyzerAsync(source);
+    }
+
+    [Fact]
     public async Task IQueryable_ExplicitCast()
     {
         const string source =
