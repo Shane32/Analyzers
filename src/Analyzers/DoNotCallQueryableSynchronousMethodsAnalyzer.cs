@@ -35,7 +35,16 @@ public class DoNotCallQueryableSynchronousMethodsAnalyzer : DiagnosticAnalyzer
         if (context.Operation is IInvocationOperation invocationOperation &&
             invocationOperation.TargetMethod.IsStatic &&
             invocationOperation.TargetMethod.ContainingType.ToString() == "System.Linq.Queryable" &&
-            invocationOperation.Type?.Name != nameof(IQueryable)) {
+            invocationOperation.Type != null &&
+            invocationOperation.Type.Name != nameof(IQueryable)) {
+
+            // check if the return type implements IQueryable
+            var returnType = invocationOperation.Type!;
+            foreach (var i in returnType.Interfaces) {
+                if (i.Name == nameof(IQueryable)) {
+                    return;
+                }
+            }
 
             // ignore calls within Expressions
             var parent = invocationOperation.Parent;

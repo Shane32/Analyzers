@@ -27,6 +27,27 @@ public class DoNotCallQueryableSynchronousMethodsAnalyzerTests
     }
 
     [Fact]
+    public async Task UseOfIQueryable_OrderBy_NoDiagnostic()
+    {
+        const string source =
+            """
+            using System.Linq;
+
+            public class TestClass
+            {
+                public TestClass()
+                {
+                    var query = Enumerable.Empty<int>().AsQueryable();
+                    var query2 = query.OrderBy(x => x);
+                }
+            }
+            """
+        ;
+
+        await VerifyCS.VerifyAnalyzerAsync(source);
+    }
+
+    [Fact]
     public async Task IQueryable_Single()
     {
         const string source =
