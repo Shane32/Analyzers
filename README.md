@@ -10,7 +10,15 @@ This package contains a collection of Roslyn analyzers and code fixes that can b
 
 Prevents casting `IQueryable<T>` to `IEnumerable<T>`.  This is a common mistake that can cause performance issues by preventing the query from being executed asynchronously.
 
-Use an explicit cast or `AsEnumerable()` instead.
+To fix this warning, call `ToListAsync()` to asynchronously execute the query before casting it to `IEnumerable<T>`.
+
+Explicit casts and `AsEnumerable()` calls will not trigger this warning.
+
+2. Synchronous `IQueryable` method call analyzer
+
+Prevents calling `Queryable` methods that synchronously execute the query such as `Single()` or `FirstOrDefault()`.
+
+To fix this warning, use the asynchronous version of the method such as `SingleAsync()` or `FirstOrDefaultAsync()`.
 
 ## Credits
 
