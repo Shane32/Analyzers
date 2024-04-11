@@ -71,6 +71,29 @@ public class DoNotCallQueryableSynchronousMethodsAnalyzerTests
     }
 
     [Fact]
+    public async Task IQueryable_SingleOrDefault()
+    {
+        const string source =
+            """
+            using System.Linq;
+
+            public class TestClass
+            {
+                public TestClass()
+                {
+                    var query = Enumerable.Empty<int>().AsQueryable();
+                    var query2 = query.Select(x => new { Value = x });
+                    var value = query2.SingleOrDefault(x => x.Value == 5);
+                }
+            }
+            """
+        ;
+
+        await VerifyCS.VerifyAnalyzerAsync(source,
+            VerifyCS.Diagnostic().WithSpan(9, 21, 9, 62).WithArguments("SingleOrDefault"));
+    }
+
+    [Fact]
     public async Task IQueryable_AsEnumerable_Single()
     {
         const string source =
