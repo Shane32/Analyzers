@@ -20,6 +20,12 @@ Prevents calling `Queryable` methods that synchronously execute the query such a
 
 To fix this warning, use the asynchronous version of the method such as `SingleAsync()` or `FirstOrDefaultAsync()`.
 
+3. Async methods must have CancellationToken parameter analyzer
+
+Ensures that methods ending with "Async" in non-Controller classes have a CancellationToken parameter. This enforces the best practice of supporting cancellation in all asynchronous operations.
+
+To fix this warning, add a CancellationToken parameter to the method signature. The parameter can be optional with a default value of `default`.
+
 ## Credits
 
 Glory to Jehovah, Lord of Lords and King of Kings, creator of Heaven and Earth, who through his Son Jesus Christ,
