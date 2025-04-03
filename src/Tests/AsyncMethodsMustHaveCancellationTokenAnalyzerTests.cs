@@ -133,4 +133,22 @@ public class AsyncMethodsMustHaveCancellationTokenAnalyzerTests
 
         await VerifyCS.VerifyAnalyzerAsync(source);
     }
+
+    [Fact]
+    public async Task AsyncMethodInInterfaceWithoutCancellationToken_ShouldReportDiagnostic()
+    {
+        const string source =
+            """
+            using System.Threading.Tasks;
+
+            public interface ITestService
+            {
+                Task GetDataAsync();
+            }
+            """
+        ;
+
+        await VerifyCS.VerifyAnalyzerAsync(source,
+            VerifyCS.Diagnostic().WithSpan(5, 10, 5, 22).WithArguments("GetDataAsync"));
+    }
 }

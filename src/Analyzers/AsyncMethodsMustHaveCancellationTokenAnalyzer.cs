@@ -39,15 +39,20 @@ public class AsyncMethodsMustHaveCancellationTokenAnalyzer : DiagnosticAnalyzer
         if (!methodName.EndsWith("Async"))
             return;
 
-        // Get the containing class
+        // Check if method is in a class or interface
         var classDeclaration = methodDeclaration.FirstAncestorOrSelf<ClassDeclarationSyntax>();
-        if (classDeclaration == null)
+        var interfaceDeclaration = methodDeclaration.FirstAncestorOrSelf<InterfaceDeclarationSyntax>();
+
+        // Skip if not in a class or interface
+        if (classDeclaration == null && interfaceDeclaration == null)
             return;
 
-        // Check if class name ends with "Controller"
-        var className = classDeclaration.Identifier.Text;
-        if (className.EndsWith("Controller"))
-            return;
+        // Skip if in a Controller class
+        if (classDeclaration != null) {
+            var className = classDeclaration.Identifier.Text;
+            if (className.EndsWith("Controller"))
+                return;
+        }
 
         // Check if method has a CancellationToken parameter
         var hasCancellationToken = false;
