@@ -9,4 +9,11 @@ Rule ID | Category | Severity | Notes
 --------|----------|----------|--------------------
 SHANE001 | Usage | Warning | DoNotCastIQueryableImplicitlyAnalyzer
 SHANE002 | Usage | Warning | DoNotCallQueryableSynchronousMethodsAnalyzer
+
+## Release 2.0.0
+
+### New Rules
+
+Rule ID | Category | Severity | Notes
+--------|----------|----------|--------------------
 SHANE003 | Usage | Warning | AsyncMethodsMustHaveCancellationTokenAnalyzer
