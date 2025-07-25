@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -54,19 +55,34 @@ public class AsyncMethodsMustHaveCancellationTokenAnalyzer : DiagnosticAnalyzer
                 return;
         }
 
-        // Check if method has a CancellationToken parameter
-        var hasCancellationToken = false;
         var semanticModel = context.SemanticModel;
+
+        // Skip if method overrides a base member or implements an interface member
+        if (IsOverrideOrInterfaceImplementation(methodDeclaration, semanticModel))
+            return;
+
+        // Check if method has a CancellationToken parameter or HttpContext parameter
+        var hasCancellationToken = false;
+        var hasHttpContext = false;
 
         foreach (var parameter in methodDeclaration.ParameterList.Parameters) {
             if (parameter.Type == null)
                 continue;
             var parameterType = semanticModel.GetTypeInfo(parameter.Type).Type;
-            if (parameterType != null && parameterType.ToString() == "System.Threading.CancellationToken") {
-                hasCancellationToken = true;
-                break;
+            if (parameterType != null) {
+                var typeString = parameterType.ToString();
+                if (typeString == "System.Threading.CancellationToken") {
+                    hasCancellationToken = true;
+                }
+                else if (typeString == "Microsoft.AspNetCore.Http.HttpContext") {
+                    hasHttpContext = true;
+                }
             }
         }
+
+        // Skip if method has HttpContext parameter (common in ASP.NET Core minimal APIs)
+        if (hasHttpContext)
+            return;
 
         if (!hasCancellationToken) {
             var diagnostic = Diagnostic.Create(
@@ -76,5 +92,36 @@ public class AsyncMethodsMustHaveCancellationTokenAnalyzer : DiagnosticAnalyzer
 
             context.ReportDiagnostic(diagnostic);
         }
+    }
+
+    private static bool IsOverrideOrInterfaceImplementation(MethodDeclarationSyntax methodDeclaration, SemanticModel semanticModel)
+    {
+        // Check if method has override modifier
+        if (methodDeclaration.Modifiers.Any(SyntaxKind.OverrideKeyword))
+            return true;
+
+        // Get the method symbol to check if it implements an interface
+        var methodSymbol = semanticModel.GetDeclaredSymbol(methodDeclaration);
+        if (methodSymbol == null)
+            return false;
+
+        // Check if the method implements an interface member
+        var containingType = methodSymbol.ContainingType;
+        if (containingType == null)
+            return false;
+
+        // Check all interfaces implemented by the containing type
+        foreach (var interfaceType in containingType.AllInterfaces)
+        {
+            foreach (var interfaceMember in interfaceType.GetMembers().OfType<IMethodSymbol>())
+            {
+                // Check if this method implements the interface method
+                var implementation = containingType.FindImplementationForInterfaceMember(interfaceMember);
+                if (SymbolEqualityComparer.Default.Equals(implementation, methodSymbol))
+                    return true;
+            }
+        }
+
+        return false;
     }
 }
