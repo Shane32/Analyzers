@@ -167,7 +167,6 @@ public class GetCallingAssemblyMustBeInNoInliningMethodAnalyzerTests
             """;
 
         await VerifyCS.VerifyAnalyzerAsync(source,
-            VerifyCS.Diagnostic().WithSpan(5, 17, 5, 26).WithArguments("GetCaller"),
             VerifyCS.Diagnostic().WithSpan(5, 17, 5, 26).WithArguments("GetCaller"));
     }
 

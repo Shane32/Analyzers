@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -26,43 +27,58 @@ public class GetCallingAssemblyMustBeInNoInliningMethodAnalyzer : DiagnosticAnal
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
 
-        context.RegisterSyntaxNodeAction(AnalyzeInvocationExpression, SyntaxKind.InvocationExpression);
+        context.RegisterSyntaxNodeAction(AnalyzeMethodDeclaration, SyntaxKind.MethodDeclaration);
+        context.RegisterSyntaxNodeAction(AnalyzeConstructorDeclaration, SyntaxKind.ConstructorDeclaration);
     }
 
-    private void AnalyzeInvocationExpression(SyntaxNodeAnalysisContext context)
+    private void AnalyzeMethodDeclaration(SyntaxNodeAnalysisContext context)
     {
-        if (context.Node is not InvocationExpressionSyntax invocation)
+        if (context.Node is not MethodDeclarationSyntax methodDeclaration)
             return;
 
-        // Check if this is a call to Assembly.GetCallingAssembly()
-        var symbolInfo = context.SemanticModel.GetSymbolInfo(invocation);
-        if (symbolInfo.Symbol is not IMethodSymbol methodSymbol)
+        if (!ContainsGetCallingAssemblyCall(methodDeclaration, context.SemanticModel))
             return;
 
-        if (methodSymbol.Name != "GetCallingAssembly" ||
-            methodSymbol.ContainingType?.ToDisplayString() != "System.Reflection.Assembly" ||
-            methodSymbol.Parameters.Length != 0)
-            return;
-
-        // Find the containing method or constructor
-        var containingMethod = invocation.FirstAncestorOrSelf<MethodDeclarationSyntax>();
-        var containingConstructor = invocation.FirstAncestorOrSelf<ConstructorDeclarationSyntax>();
-
-        if (containingMethod != null) {
-            if (!HasNoInliningAttribute(containingMethod.AttributeLists, context.SemanticModel)) {
-                context.ReportDiagnostic(Diagnostic.Create(
-                    GetCallingAssemblyMustBeInNoInliningMethod,
-                    containingMethod.Identifier.GetLocation(),
-                    containingMethod.Identifier.Text));
-            }
-        } else if (containingConstructor != null) {
-            if (!HasNoInliningAttribute(containingConstructor.AttributeLists, context.SemanticModel)) {
-                context.ReportDiagnostic(Diagnostic.Create(
-                    GetCallingAssemblyMustBeInNoInliningMethod,
-                    containingConstructor.Identifier.GetLocation(),
-                    containingConstructor.Identifier.Text));
-            }
+        if (!HasNoInliningAttribute(methodDeclaration.AttributeLists, context.SemanticModel)) {
+            context.ReportDiagnostic(Diagnostic.Create(
+                GetCallingAssemblyMustBeInNoInliningMethod,
+                methodDeclaration.Identifier.GetLocation(),
+                methodDeclaration.Identifier.Text));
         }
+    }
+
+    private void AnalyzeConstructorDeclaration(SyntaxNodeAnalysisContext context)
+    {
+        if (context.Node is not ConstructorDeclarationSyntax constructorDeclaration)
+            return;
+
+        if (!ContainsGetCallingAssemblyCall(constructorDeclaration, context.SemanticModel))
+            return;
+
+        if (!HasNoInliningAttribute(constructorDeclaration.AttributeLists, context.SemanticModel)) {
+            context.ReportDiagnostic(Diagnostic.Create(
+                GetCallingAssemblyMustBeInNoInliningMethod,
+                constructorDeclaration.Identifier.GetLocation(),
+                constructorDeclaration.Identifier.Text));
+        }
+    }
+
+    private static bool ContainsGetCallingAssemblyCall(SyntaxNode node, SemanticModel semanticModel)
+    {
+        return node.DescendantNodes()
+            .OfType<InvocationExpressionSyntax>()
+            .Any(invocation => IsGetCallingAssemblyCall(invocation, semanticModel));
+    }
+
+    private static bool IsGetCallingAssemblyCall(InvocationExpressionSyntax invocation, SemanticModel semanticModel)
+    {
+        var symbolInfo = semanticModel.GetSymbolInfo(invocation);
+        if (symbolInfo.Symbol is not IMethodSymbol methodSymbol)
+            return false;
+
+        return methodSymbol.Name == "GetCallingAssembly" &&
+               methodSymbol.ContainingType?.ToDisplayString() == "System.Reflection.Assembly" &&
+               methodSymbol.Parameters.Length == 0;
     }
 
     private static bool HasNoInliningAttribute(SyntaxList<AttributeListSyntax> attributeLists, SemanticModel semanticModel)
@@ -71,7 +87,6 @@ public class GetCallingAssemblyMustBeInNoInliningMethodAnalyzer : DiagnosticAnal
             foreach (var attribute in attributeList.Attributes) {
                 var attrSymbol = semanticModel.GetSymbolInfo(attribute).Symbol as IMethodSymbol;
                 if (attrSymbol?.ContainingType?.ToDisplayString() == "System.Runtime.CompilerServices.MethodImplAttribute") {
-                    // Check that MethodImplOptions.NoInlining is specified
                     if (HasNoInliningOption(attribute, semanticModel))
                         return true;
                 }
