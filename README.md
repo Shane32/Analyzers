@@ -26,6 +26,12 @@ Ensures that methods ending with "Async" in non-Controller classes have a Cancel
 
 To fix this warning, add a CancellationToken parameter to the method signature. The parameter can be optional with a default value of `default`.
 
+4. `Assembly.GetCallingAssembly()` must be in a `[MethodImpl(MethodImplOptions.NoInlining)]` method
+
+Ensures that any method or constructor calling `Assembly.GetCallingAssembly()` is marked with `[MethodImpl(MethodImplOptions.NoInlining)]`. Without this attribute, the JIT compiler may inline the method and cause `GetCallingAssembly()` to return an unexpected assembly.
+
+To fix this warning, add `[MethodImpl(MethodImplOptions.NoInlining)]` to the containing method or constructor.
+
 ## Credits
 
 Glory to Jehovah, Lord of Lords and King of Kings, creator of Heaven and Earth, who through his Son Jesus Christ,

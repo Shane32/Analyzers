@@ -5,3 +5,4 @@
 
 Rule ID | Category | Severity | Notes
 --------|----------|----------|-------
+SHANE004 | Usage | Warning | GetCallingAssemblyMustBeInNoInliningMethodAnalyzer
