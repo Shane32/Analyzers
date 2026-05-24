@@ -104,9 +104,7 @@ public class GetCallingAssemblyMustBeInNoInliningMethodAnalyzer : DiagnosticAnal
         foreach (var argument in attribute.ArgumentList.Arguments) {
             var value = semanticModel.GetConstantValue(argument.Expression);
             if (value.HasValue && value.Value is int intValue) {
-                // MethodImplOptions.NoInlining == 8
-                const int NoInlining = 8;
-                if ((intValue & NoInlining) != 0)
+                if ((intValue & (int)System.Runtime.CompilerServices.MethodImplOptions.NoInlining) != 0)
                     return true;
             }
         }
